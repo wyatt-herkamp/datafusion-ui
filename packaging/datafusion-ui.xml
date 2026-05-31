@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  shared-mime-info definition for Apache Parquet.
+
+  Parquet is not part of the default freedesktop MIME database, so without
+  this file the desktop environment never maps *.parquet to a MIME type and
+  the MimeType= line in datafusion-ui.desktop has nothing to match against.
+
+  Install to /usr/share/mime/packages/datafusion-ui.xml (or the per-user
+  ~/.local/share/mime/packages/) and run `update-mime-database <mimedir>`.
+-->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/vnd.apache.parquet">
+    <comment>Apache Parquet file</comment>
+    <comment xml:lang="en">Apache Parquet file</comment>
+    <acronym>Parquet</acronym>
+    <expanded-acronym>Apache Parquet columnar storage file</expanded-acronym>
+    <glob pattern="*.parquet"/>
+    <glob pattern="*.parq"/>
+    <glob pattern="*.pqt"/>
+    <!-- Parquet files begin (and end) with the 4-byte magic "PAR1". -->
+    <magic priority="60">
+      <match type="string" value="PAR1" offset="0"/>
+    </magic>
+  </mime-type>
+</mime-info>

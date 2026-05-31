@@ -72,6 +72,17 @@ fn main() -> iced::Result {
         App::view,
     )
     .title(App::title)
+    .window(iced::window::Settings {
+        // Match the basename of packaging/datafusion-ui.desktop and its
+        // StartupWMClass so KDE/GNOME can correlate the launch with our
+        // window and clear the startup "busy" feedback immediately.
+        #[cfg(target_os = "linux")]
+        platform_specific: iced::window::settings::PlatformSpecific {
+            application_id: "datafusion-ui".to_string(),
+            ..Default::default()
+        },
+        ..Default::default()
+    })
     .theme(App::theme_for)
     .scale_factor(App::scale_factor)
     .font(theme::GEIST_REGULAR_BYTES)
