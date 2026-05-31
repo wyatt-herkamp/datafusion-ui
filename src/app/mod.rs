@@ -65,7 +65,11 @@ impl App {
         let register = app.register_state_tables_task();
         let initial = match command {
             Some(SubCommand::File { path }) => {
-                Task::done(FileMessage::FilePicked(Some(path)).into())
+                if let Some(path) = path {
+                    Task::done(FileMessage::FilePicked(Some(path)).into())
+                } else {
+                    Task::none()
+                }
             }
             Some(SubCommand::FlightSql { endpoint }) => {
                 app.connect_form = Some(ConnectForm {

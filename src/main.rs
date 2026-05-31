@@ -32,7 +32,10 @@ pub enum SubCommand {
     /// Opens the app with a specified FlightSQL endpoint. Only use if no file argument is provided, and the endpoint supports FlightSQL.
     FlightSql { endpoint: String },
     /// Opens the app with a specified file.
-    File { path: std::path::PathBuf },
+    File {
+        /// The file argument is optional to allow `datafusion-ui file` to open the file picker dialog on launch. If a path is provided, the app will attempt to open it directly.
+        path: Option<std::path::PathBuf>,
+    },
 }
 fn main() -> iced::Result {
     human_panic::setup_panic!();
