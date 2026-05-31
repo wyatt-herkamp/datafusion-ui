@@ -1,0 +1,12 @@
+[package]
+name = "sql-ide"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+description = "GUI-agnostic SQL IDE support: lexing, schema-aware completion, and syntax diagnostics."
+
+[dependencies]
+# Reuses the exact sqlparser that DataFusion 53.1 resolves, so no duplicate compile.
+sqlparser = { workspace = true }

@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=DataFusion UI
+GenericName=Parquet & FlightSQL Viewer
+Comment=Inspect Apache Parquet files and query DataFusion / FlightSQL sources
+Exec=datafusion-ui file %f
+Icon=application-x-parquet
+Terminal=false
+Categories=Utility;Database;
+MimeType=application/vnd.apache.parquet;application/x-parquet;
+Keywords=parquet;arrow;datafusion;flightsql;data;analytics;
+StartupNotify=true
+StartupWMClass=datafusion-ui
