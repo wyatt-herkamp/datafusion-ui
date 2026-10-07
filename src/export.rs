@@ -15,8 +15,8 @@ use datafusion::arrow::json::{ArrayWriter, LineDelimitedWriter};
 use datafusion::physical_plan::SendableRecordBatchStream;
 use futures::StreamExt;
 use parquet::arrow::ArrowWriter;
-use parquet::basic::Compression;
-use parquet::file::properties::WriterProperties;
+use parquet::basic::{Compression, Encoding};
+use parquet::file::properties::{WriterProperties, WriterVersion};
 use parquet::schema::types::ColumnPath;
 
 use crate::error::ExportError;
@@ -29,22 +29,21 @@ pub enum ExportFormat {
 }
 
 impl ExportFormat {
-    pub const ALL: [ExportFormat; 3] =
-        [ExportFormat::Parquet, ExportFormat::Csv, ExportFormat::Json];
+    pub const ALL: [Self; 3] = [Self::Parquet, Self::Csv, Self::Json];
 
     pub fn label(self) -> &'static str {
         match self {
-            ExportFormat::Parquet => "Parquet",
-            ExportFormat::Csv => "CSV",
-            ExportFormat::Json => "JSON",
+            Self::Parquet => "Parquet",
+            Self::Csv => "CSV",
+            Self::Json => "JSON",
         }
     }
 
     pub fn extension(self) -> &'static str {
         match self {
-            ExportFormat::Parquet => "parquet",
-            ExportFormat::Csv => "csv",
-            ExportFormat::Json => "json",
+            Self::Parquet => "parquet",
+            Self::Csv => "csv",
+            Self::Json => "json",
         }
     }
 }
@@ -63,31 +62,109 @@ impl std::fmt::Display for ParquetCompression {
     }
 }
 impl ParquetCompression {
-    pub const ALL: [ParquetCompression; 5] = [
-        ParquetCompression::None,
-        ParquetCompression::Snappy,
-        ParquetCompression::Gzip,
-        ParquetCompression::Zstd,
-        ParquetCompression::Lz4,
-    ];
+    pub const ALL: [Self; 5] = [Self::None, Self::Snappy, Self::Gzip, Self::Zstd, Self::Lz4];
 
     pub fn label(&self) -> &'static str {
         match self {
-            ParquetCompression::None => "None",
-            ParquetCompression::Snappy => "Snappy",
-            ParquetCompression::Gzip => "Gzip",
-            ParquetCompression::Zstd => "Zstd",
-            ParquetCompression::Lz4 => "LZ4",
+            Self::None => "None",
+            Self::Snappy => "Snappy",
+            Self::Gzip => "Gzip",
+            Self::Zstd => "Zstd",
+            Self::Lz4 => "LZ4",
         }
     }
 
     fn to_parquet(self) -> Compression {
         match self {
-            ParquetCompression::None => Compression::UNCOMPRESSED,
-            ParquetCompression::Snappy => Compression::SNAPPY,
-            ParquetCompression::Gzip => Compression::GZIP(Default::default()),
-            ParquetCompression::Zstd => Compression::ZSTD(Default::default()),
-            ParquetCompression::Lz4 => Compression::LZ4_RAW,
+            Self::None => Compression::UNCOMPRESSED,
+            Self::Snappy => Compression::SNAPPY,
+            Self::Gzip => Compression::GZIP(Default::default()),
+            Self::Zstd => Compression::ZSTD(Default::default()),
+            Self::Lz4 => Compression::LZ4_RAW,
+        }
+    }
+}
+
+#[allow(non_camel_case_types)]
+#[allow(clippy::upper_case_acronyms)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParquetEncoding {
+    PLAIN = 0,
+    PLAIN_DICTIONARY = 2,
+    RLE = 3,
+    #[deprecated]
+    BIT_PACKED = 4,
+    DELTA_BINARY_PACKED = 5,
+    DELTA_LENGTH_BYTE_ARRAY = 6,
+    DELTA_BYTE_ARRAY = 7,
+    RLE_DICTIONARY = 8,
+    BYTE_STREAM_SPLIT = 9,
+}
+impl std::fmt::Display for ParquetEncoding {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.label())
+    }
+}
+#[allow(deprecated)]
+impl ParquetEncoding {
+    pub const ALL: [Self; 9] = [
+        Self::PLAIN,
+        Self::PLAIN_DICTIONARY,
+        Self::RLE,
+        Self::BIT_PACKED,
+        Self::DELTA_BINARY_PACKED,
+        Self::DELTA_LENGTH_BYTE_ARRAY,
+        Self::DELTA_BYTE_ARRAY,
+        Self::RLE_DICTIONARY,
+        Self::BYTE_STREAM_SPLIT,
+    ];
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::PLAIN => "Plain",
+            Self::PLAIN_DICTIONARY => "PlainDictionary",
+            Self::RLE => "Rle",
+            Self::BIT_PACKED => "BitPacked",
+            Self::DELTA_BINARY_PACKED => "DeltaBinaryPacked",
+            Self::DELTA_LENGTH_BYTE_ARRAY => "DeltaLengthByteArray",
+            Self::DELTA_BYTE_ARRAY => "DeltaByteArray",
+            Self::RLE_DICTIONARY => "RleDictionary",
+            Self::BYTE_STREAM_SPLIT => "ByteStreamSplit",
+        }
+    }
+
+    fn to_parquet(self) -> Encoding {
+        match self {
+            Self::PLAIN => Encoding::PLAIN,
+            Self::PLAIN_DICTIONARY => Encoding::PLAIN_DICTIONARY,
+            Self::RLE => Encoding::RLE,
+            Self::BIT_PACKED => Encoding::BIT_PACKED,
+            Self::DELTA_BINARY_PACKED => Encoding::DELTA_BINARY_PACKED,
+            Self::DELTA_LENGTH_BYTE_ARRAY => Encoding::DELTA_LENGTH_BYTE_ARRAY,
+            Self::DELTA_BYTE_ARRAY => Encoding::DELTA_BYTE_ARRAY,
+            Self::RLE_DICTIONARY => Encoding::RLE_DICTIONARY,
+            Self::BYTE_STREAM_SPLIT => Encoding::BYTE_STREAM_SPLIT,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParquetVersion {
+    V1_0,
+    V2_0,
+}
+impl std::fmt::Display for ParquetVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+impl ParquetVersion {
+    pub const ALL: [Self; 2] = [Self::V1_0, Self::V2_0];
+
+    fn to_parquet(self) -> WriterVersion {
+        match self {
+            Self::V1_0 => WriterVersion::PARQUET_1_0,
+            Self::V2_0 => WriterVersion::PARQUET_2_0,
         }
     }
 }
@@ -109,7 +186,8 @@ pub trait ExportOptions {
 pub struct ParquetOptions {
     pub compression: ParquetCompression,
     pub encoding: Option<parquet::basic::Encoding>,
-    pub dictionary_enabled: bool,
+    pub dictionary: Option<bool>,
+    pub version: ParquetVersion,
     pub per_column_options: HashMap<String, ParquetColumnOptions>,
 }
 impl Default for ParquetOptions {
@@ -117,7 +195,8 @@ impl Default for ParquetOptions {
         Self {
             compression: ParquetCompression::Zstd,
             encoding: None,
-            dictionary_enabled: true,
+            dictionary: None,
+            version: ParquetVersion::V2_0,
             per_column_options: HashMap::new(),
         }
     }
@@ -143,7 +222,10 @@ impl ExportOptions for ParquetOptions {
 
         let mut props = WriterProperties::builder()
             .set_compression(self.compression.to_parquet())
-            .set_dictionary_enabled(self.dictionary_enabled);
+            .set_writer_version(self.version.to_parquet());
+        if let Some(dictionary) = self.dictionary {
+            props = props.set_dictionary_enabled(dictionary);
+        }
         if let Some(encoding) = self.encoding {
             props = props.set_encoding(encoding);
         }
@@ -153,11 +235,11 @@ impl ExportOptions for ParquetOptions {
             if let Some(value) = co.compression {
                 props = props.set_column_compression(col.clone(), value.to_parquet());
             }
-            if let Some(value) = co.dictionary_enabled {
+            if let Some(value) = co.dictionary {
                 props = props.set_column_dictionary_enabled(col.clone(), value);
             }
             if let Some(value) = co.encoding {
-                props = props.set_column_encoding(col.clone(), value);
+                props = props.set_column_encoding(col.clone(), value.to_parquet());
             }
         }
 
@@ -180,8 +262,8 @@ impl ExportOptions for ParquetOptions {
 #[derive(Debug, Default, Clone)]
 pub struct ParquetColumnOptions {
     pub compression: Option<ParquetCompression>,
-    pub encoding: Option<parquet::basic::Encoding>,
-    pub dictionary_enabled: Option<bool>,
+    pub encoding: Option<ParquetEncoding>,
+    pub dictionary: Option<bool>,
 }
 
 #[derive(Debug, Clone)]

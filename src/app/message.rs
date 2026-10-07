@@ -13,7 +13,7 @@ use iced::widget::text_editor;
 use crate::engine::QueryResult;
 use crate::error::{AppError, FlightError, ParquetError, QueryError};
 use crate::explorer::{ExplorerLoad, ExplorerTarget};
-use crate::export::{ExportFormat, ParquetColumnOptions, ParquetCompression};
+use crate::export::{ExportFormat, ParquetColumnOptions, ParquetCompression, ParquetVersion};
 use crate::flightsql::FlightSqlClient;
 use crate::parquet_io::FileSummary;
 
@@ -126,6 +126,8 @@ pub enum SqlMessage {
     ExportCancel(u64),
     ExportSetFormat(u64, ExportFormat),
     ExportSetCompression(u64, ParquetCompression),
+    ExportSetDictionary(u64, Option<bool>),
+    ExportSetParquetVersion(u64, ParquetVersion),
     ExportParquetColumnName(u64, String),
     ExportParquetColumnOptions {
         id: u64,

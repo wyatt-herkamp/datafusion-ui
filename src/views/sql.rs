@@ -21,7 +21,9 @@ use crate::app::{
     SqlMessage,
 };
 use crate::export::{ExportFormat, ParquetColumnOptions, ParquetCompression};
-use crate::sqlide_highlight::{HighlightSettings, SqlHighlighter};
+use crate::export::{ParquetEncoding, ParquetVersion};
+use crate::sqlide_highlight::HighlightSettings;
+use crate::sqlide_highlight::SqlHighlighter;
 use crate::theme::palette;
 use crate::theme::{self, FONT_UI_MEDIUM};
 use crate::widgets::resize_handle_vertical;
@@ -654,6 +656,16 @@ fn export_overlay<'a>(id: u64, dialog: &'a ExportDialogState) -> Element<'a, Mes
                 move |c| SqlMessage::ExportSetCompression(id, c).into(),
             );
 
+            let dict = pick_list(
+                TriState::ALL,
+                Some(TriState::from(opts.dictionary)),
+                move |dict| SqlMessage::ExportSetDictionary(id, dict.into()).into(),
+            );
+
+            let version = pick_list(ParquetVersion::ALL, Some(opts.version), move |v| {
+                SqlMessage::ExportSetParquetVersion(id, v).into()
+            });
+
             let col_name = text_input("Configure column...", &dialog.parquet_column_name)
                 .on_input(move |s| SqlMessage::ExportParquetColumnName(id, s).into())
                 .on_submit(
@@ -685,6 +697,19 @@ fn export_overlay<'a>(id: u64, dialog: &'a ExportDialogState) -> Element<'a, Mes
                         .into(),
                     );
 
+                let encoding =
+                    pick_list(ParquetEncoding::ALL.as_slice(), opts.encoding, move |c| {
+                        SqlMessage::ExportParquetColumnOptions {
+                            id,
+                            column: col.clone(),
+                            options: Some(ParquetColumnOptions {
+                                encoding: Some(c),
+                                ..opts.clone()
+                            }),
+                        }
+                        .into()
+                    });
+
                 let comp = pick_list(
                     ParquetCompression::ALL.as_slice(),
                     opts.compression,
@@ -702,13 +727,13 @@ fn export_overlay<'a>(id: u64, dialog: &'a ExportDialogState) -> Element<'a, Mes
                 );
                 let dict = pick_list(
                     TriState::ALL,
-                    Some(TriState::from(opts.dictionary_enabled)),
+                    Some(TriState::from(opts.dictionary)),
                     move |c| {
                         SqlMessage::ExportParquetColumnOptions {
                             id,
                             column: col.clone(),
                             options: Some(ParquetColumnOptions {
-                                dictionary_enabled: c.into(),
+                                dictionary: c.into(),
                                 ..opts.clone()
                             }),
                         }
@@ -722,7 +747,8 @@ fn export_overlay<'a>(id: u64, dialog: &'a ExportDialogState) -> Element<'a, Mes
                         .spacing(8),
                     column![
                         labelled("Compression", comp.into()),
-                        labelled("Dictionary", dict.into())
+                        labelled("Dictionary", dict.into()),
+                        labelled("Encoding", encoding.into())
                     ]
                     .padding([0, 12]),
                 ]);
@@ -738,6 +764,8 @@ fn export_overlay<'a>(id: u64, dialog: &'a ExportDialogState) -> Element<'a, Mes
 
             column![
                 labelled("Compression", comp.into()),
+                labelled("Dictionary", dict.into()),
+                labelled("Version", version.into()),
                 col_opts_header,
                 col_opts
             ]

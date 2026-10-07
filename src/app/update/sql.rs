@@ -414,6 +414,18 @@ impl App {
                 }
                 Task::none()
             }
+            SqlMessage::ExportSetDictionary(id, value) => {
+                if let Some(d) = self.export_dialog_mut(id) {
+                    d.opts_parquet.dictionary = value;
+                }
+                Task::none()
+            }
+            SqlMessage::ExportSetParquetVersion(id, version) => {
+                if let Some(d) = self.export_dialog_mut(id) {
+                    d.opts_parquet.version = version;
+                }
+                Task::none()
+            }
             SqlMessage::ExportParquetColumnName(id, column) => {
                 if let Some(d) = self.export_dialog_mut(id) {
                     d.parquet_column_name = column;
