@@ -58,8 +58,11 @@ const TABLE_WIDTH: f32 = GUTTER + total_width(&CHUNK_COL_WIDTHS);
 // Keep the two tables from drifting apart.
 const _: () = assert!(total_width(&SUMMARY_COL_WIDTHS) == total_width(&CHUNK_COL_WIDTHS));
 
-pub fn view(file: &FileSummary, selected: Option<usize>) -> Element<'_, Message> {
-    let groups = file.metadata.row_groups();
+pub fn view(file: &FileSummary, selected: Option<usize>) -> Option<Element<'_, Message>> {
+    let Some(meta) = &file.metadata else {
+        return None;
+    };
+    let groups = meta.row_groups();
     let total_rows: i64 = groups.iter().map(RowGroupMetaData::num_rows).sum();
 
     let mut table = column![summary_header()].spacing(0);
@@ -99,9 +102,11 @@ pub fn view(file: &FileSummary, selected: Option<usize>) -> Element<'_, Message>
         }
     }
 
-    column![stats_strip(file, groups, total_rows), table]
-        .spacing(14)
-        .into()
+    Some(
+        column![stats_strip(file, groups, total_rows), table]
+            .spacing(14)
+            .into(),
+    )
 }
 
 fn width(index: usize) -> f32 {
@@ -131,10 +136,9 @@ fn stats_strip<'a>(
             stat_tile(
                 "Columns",
                 count(groups[0].num_columns() as i64),
-                Some(format!(
-                    "{} leaf",
-                    file.metadata.file_metadata().schema_descr().num_columns()
-                )),
+                file.metadata
+                    .as_ref()
+                    .map(|m| format!("{} leaf", m.file_metadata().schema_descr().num_columns())),
             ),
         ]
         .spacing(32)
@@ -205,16 +209,18 @@ fn column_chunk_table(file: &FileSummary, rg_idx: usize) -> Element<'_, Message>
     }
     let mut table = column![header_row].spacing(0);
 
-    for (idx, cc) in file.metadata.row_group(rg_idx).columns().iter().enumerate() {
-        let mut row = row![].spacing(0);
+    if let Some(meta) = &file.metadata {
+        for (idx, cc) in meta.row_group(rg_idx).columns().iter().enumerate() {
+            let mut row = row![].spacing(0);
 
-        for column in columns.iter() {
-            row = row.push(body_cell((column.view)(cc), column.width));
+            for column in columns.iter() {
+                row = row.push(body_cell((column.view)(cc), column.width));
+            }
+
+            let zebra = idx % 2 == 1;
+            let styled = container(row).style(move |theme| body_row_style(theme, zebra));
+            table = table.push(styled);
         }
-
-        let zebra = idx % 2 == 1;
-        let styled = container(row).style(move |theme| body_row_style(theme, zebra));
-        table = table.push(styled);
     }
 
     // An accent rule down the gutter ties the detail block to the row it belongs to.

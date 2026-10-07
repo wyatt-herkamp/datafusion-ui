@@ -14,31 +14,42 @@ pub fn view<'a>(
     file: &'a FileSummary,
     expanded: &'a ahash::AHashSet<usize>,
 ) -> Element<'a, Message> {
-    let meta = file.metadata.file_metadata();
+    let meta = file.metadata.as_ref().map(|m| m.file_metadata());
 
-    let (compressed, uncompressed) =
-        file.metadata
-            .row_groups()
-            .iter()
-            .fold((0_i64, 0_i64), |(c, u), rg| {
-                let chunk_c: i64 = rg.columns().iter().map(|cc| cc.compressed_size()).sum();
-                let chunk_u: i64 = rg.columns().iter().map(|cc| cc.uncompressed_size()).sum();
-                (c + chunk_c, u + chunk_u)
-            });
+    let (compressed, uncompressed) = file.metadata.as_ref().map_or((0, 0), |m| {
+        m.row_groups().iter().fold((0_i64, 0_i64), |(c, u), rg| {
+            let chunk_c: i64 = rg.columns().iter().map(|cc| cc.compressed_size()).sum();
+            let chunk_u: i64 = rg.columns().iter().map(|cc| cc.uncompressed_size()).sum();
+            (c + chunk_c, u + chunk_u)
+        })
+    });
 
     let mut col = column![
         section("File"),
         kv("Path", file.path.display().to_string()),
         kv("Size on disk", human_bytes(file.file_size_bytes)),
         section("Contents"),
-        kv("Total rows", count(file.total_rows)),
-        kv("Row groups", count(file.metadata.num_row_groups() as i64)),
+        kv(
+            "Total rows",
+            file.total_rows.map_or("?".into(), |rows| count(rows))
+        ),
+        kv(
+            "Row groups",
+            file.metadata
+                .as_ref()
+                .map_or("?".into(), |m| count(m.num_row_groups() as i64))
+        ),
         kv("Columns", count(file.schema.fields().len() as i64)),
         section("Writer"),
-        kv("Parquet version", format!("{}", meta.version())),
+        kv(
+            "Parquet version",
+            meta.map_or("?".into(), |m| m.version().to_string())
+        ),
         kv(
             "Created by",
-            meta.created_by().unwrap_or("(unknown)").to_string()
+            meta.and_then(|m| m.created_by())
+                .unwrap_or("(unknown)")
+                .to_string()
         ),
         section("Storage"),
         kv("Raw (sum)", human_bytes(uncompressed.max(0) as u64)),
@@ -57,7 +68,7 @@ pub fn view<'a>(
     col = col.push(section("Sort Order"));
     col = col.push(kv("Row groups", sort_order_summary(file)));
 
-    if let Some(kv_pairs) = meta.key_value_metadata()
+    if let Some(kv_pairs) = meta.and_then(|meta| meta.key_value_metadata())
         && !kv_pairs.is_empty()
     {
         col = col.push(section("Key/Value Metadata"));
@@ -132,7 +143,11 @@ pub fn format_sorting_columns<'a>(
 }
 
 fn sort_order_summary(file: &FileSummary) -> String {
-    let groups = file.metadata.row_groups();
+    let groups = file
+        .metadata
+        .as_ref()
+        .map(|m| m.row_groups())
+        .unwrap_or(&[]);
     if groups.is_empty() {
         return "(no row groups)".into();
     }
@@ -210,8 +225,11 @@ const SCHEMA_COL_WIDTHS: [f32; 7] = [240.0, 110.0, 220.0, 260.0, 80.0, 80.0, 80.
 fn schema_table<'a>(
     file: &'a FileSummary,
     expanded: &'a ahash::AHashSet<usize>,
-) -> Element<'a, Message> {
-    let schema_descr = file.metadata.file_metadata().schema_descr();
+) -> Option<Element<'a, Message>> {
+    let Some(meta) = &file.metadata else {
+        return None;
+    };
+    let schema_descr = meta.file_metadata().schema_descr();
     let num_cols = schema_descr.num_columns();
 
     let mut rows = column![
@@ -279,7 +297,7 @@ fn schema_table<'a>(
         }
     }
 
-    rows.into()
+    Some(rows.into())
 }
 
 fn is_expandable_type(dt: &DataType) -> bool {

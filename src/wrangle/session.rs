@@ -4,10 +4,13 @@
 //! (built from the user's [`SessionSettings`]), so the SQL Workspace can query
 //! any of them by name and tell them apart.
 
+use std::ffi::OsStr;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use arrow::datatypes::SchemaRef;
 use arrow::record_batch::RecordBatch;
+use datafusion::execution::options::ArrowReadOptions;
 use datafusion::prelude::{ParquetReadOptions, SessionContext};
 
 use crate::config::{RuntimeSettings, SessionSettings};
@@ -52,16 +55,33 @@ impl SharedSession {
     pub async fn register_file(
         self: Arc<Self>,
         name: String,
-        path: String,
+        path: PathBuf,
     ) -> Result<SchemaRef, QueryError> {
-        tracing::info!(name = %name, path = %path, "registering parquet in shared session");
-        self.ctx
-            .register_parquet(&name, &path, ParquetReadOptions::default())
-            .await
-            .map_err(|e| {
-                tracing::error!(error = %e, "register parquet failed");
-                QueryError::Register(e.to_string())
-            })?;
+        tracing::info!(name = %name, path = %path.display(), "registering parquet in shared session");
+
+        let Some(table_path) = path.to_str() else {
+            return Err(QueryError::Register("path is not valid UTF-8".into()));
+        };
+        let Some(ext) = path.extension().and_then(OsStr::to_str) else {
+            return Err(QueryError::Register("missing file extension".into()));
+        };
+
+        if ext.eq_ignore_ascii_case("parquet") {
+            self.ctx
+                .register_parquet(&name, table_path, ParquetReadOptions::default())
+                .await
+        } else if ext.eq_ignore_ascii_case("arrow") || ext.eq_ignore_ascii_case("arrows") {
+            let mut options = ArrowReadOptions::default();
+            options.file_extension = ext;
+            self.ctx.register_arrow(&name, table_path, options).await
+        } else {
+            return Err(QueryError::Register(format!("unknown extension: {ext}")));
+        }
+        .map_err(|e| {
+            tracing::error!(error = %e, "register file failed");
+            QueryError::Register(e.to_string())
+        })?;
+
         let df = self
             .ctx
             .table(&name)

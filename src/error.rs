@@ -25,7 +25,7 @@ pub enum AppError {
     Export(#[from] ExportError),
 }
 
-/// Reading Parquet file metadata (`parquet_io`).
+/// Reading file metadata (`parquet_io`).
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum ParquetError {
     #[error("join error: {0}")]
@@ -34,8 +34,10 @@ pub enum ParquetError {
     Stat(String),
     #[error("open failed: {0}")]
     Open(String),
-    #[error("not a valid parquet file: {0}")]
-    InvalidParquet(String),
+    #[error("unknown file type: {0}")]
+    Unknown(String),
+    #[error("not a valid file: {0}")]
+    Invalid(String),
 }
 
 /// Running SQL against a local DataFusion session (`engine`, `wrangle::session`).

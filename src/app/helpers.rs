@@ -116,14 +116,14 @@ pub(crate) fn autofit_width(batch: &RecordBatch, col: usize) -> f32 {
 }
 
 pub(crate) fn welcome_view(recent: &[RecentFile]) -> Element<'_, Message> {
-    let open_btn = button(theme::ui_medium("Open Parquet file…").size(13))
+    let open_btn = button(theme::ui_medium("Open file…").size(13))
         .style(theme::accent_button)
         .padding([6, 16])
         .on_press(FileMessage::OpenFilePressed.into());
 
     let mut col = column![
         theme::display_strong("DataFusion UI"),
-        theme::mono_sm("Open a Parquet file or connect to a FlightSQL server to begin."),
+        theme::mono_sm("Open a file or connect to a FlightSQL server to begin."),
         open_btn,
     ]
     .spacing(10);

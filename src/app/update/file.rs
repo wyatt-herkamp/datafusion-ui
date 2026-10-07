@@ -11,6 +11,7 @@ impl App {
                     async move {
                         let dialog = rfd::AsyncFileDialog::new()
                             .add_filter("Parquet", &["parquet"])
+                            .add_filter("Arrow", &["arrow", "arrows"])
                             .set_title("Open File");
                         let dialog = match &parent {
                             Some(p) => dialog.set_parent(p),
@@ -33,8 +34,7 @@ impl App {
                 let path = summary.path.clone();
                 self.record_recent_file(&path);
                 // Derive a unique table name against the files already open.
-                let existing: std::collections::HashSet<String> =
-                    self.files.iter().map(|f| f.table_name.clone()).collect();
+                let existing = self.files.iter().map(|f| f.table_name.as_str()).collect();
                 let table_name = derive_table_name(&path, &existing);
                 let id = FileId(self.next_file_id);
                 self.next_file_id += 1;
@@ -45,14 +45,8 @@ impl App {
                     id,
                     view: FileView::Overview,
                 };
-                let Some(path_str) = path.to_str().map(str::to_string) else {
-                    if let Some(ft) = self.file_mut(id) {
-                        ft.register_error = Some("path is not valid UTF-8".into());
-                    }
-                    return Task::none();
-                };
                 let shared = self.local.clone();
-                Task::perform(shared.register_file(table_name, path_str), move |result| {
+                Task::perform(shared.register_file(table_name, path), move |result| {
                     FileMessage::Registered { file: id, result }.into()
                 })
             }

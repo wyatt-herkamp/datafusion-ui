@@ -132,7 +132,13 @@ impl App {
                         scroll_body(views::overview::view(&ft.summary, &ft.expanded_schema_rows))
                     }
                     FileView::RowGroups => {
-                        scroll_body(views::row_groups::view(&ft.summary, ft.selected_row_group))
+                        if let Some(content) =
+                            views::row_groups::view(&ft.summary, ft.selected_row_group)
+                        {
+                            scroll_body(content)
+                        } else {
+                            text("").into()
+                        }
                     }
                 }
             }

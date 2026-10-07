@@ -250,13 +250,12 @@ impl App {
             ft.register_error = None;
             let id = ft.id;
             let name = ft.table_name.clone();
-            if let Some(path_str) = ft.summary.path.to_str().map(str::to_string) {
-                let shared = self.local.clone();
-                tasks.push(Task::perform(
-                    shared.register_file(name, path_str),
-                    move |result| FileMessage::Registered { file: id, result }.into(),
-                ));
-            }
+
+            let shared = self.local.clone();
+            tasks.push(Task::perform(
+                shared.register_file(name, ft.summary.path.clone()),
+                move |result| FileMessage::Registered { file: id, result }.into(),
+            ));
         }
         Task::batch(tasks)
     }

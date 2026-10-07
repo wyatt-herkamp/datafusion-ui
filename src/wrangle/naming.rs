@@ -13,7 +13,7 @@ use std::hash::{Hash, Hasher};
 use std::path::Path;
 
 /// Derive a unique, valid table name for `path`, avoiding any name in `existing`.
-pub fn derive_table_name(path: &Path, existing: &HashSet<String>) -> String {
+pub fn derive_table_name(path: &Path, existing: &HashSet<&str>) -> String {
     let stem = path
         .file_stem()
         .and_then(|s| s.to_str())
@@ -56,14 +56,14 @@ fn sanitize(stem: &str) -> Option<String> {
 }
 
 /// Append `_2`, `_3`, … until the name is free.
-fn make_unique(base: String, existing: &HashSet<String>) -> String {
-    if !existing.contains(&base) {
+fn make_unique(base: String, existing: &HashSet<&str>) -> String {
+    if !existing.contains(base.as_str()) {
         return base;
     }
     let mut n = 2;
     loop {
         let candidate = format!("{base}_{n}");
-        if !existing.contains(&candidate) {
+        if !existing.contains(candidate.as_str()) {
             return candidate;
         }
         n += 1;
@@ -97,7 +97,7 @@ mod tests {
     use super::*;
 
     fn name(path: &str, existing: &[&str]) -> String {
-        let set: HashSet<String> = existing.iter().map(|s| s.to_string()).collect();
+        let set: HashSet<&str> = existing.iter().copied().collect();
         derive_table_name(Path::new(path), &set)
     }
 
