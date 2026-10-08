@@ -71,8 +71,10 @@ impl SharedSession {
                 .register_parquet(&name, table_path, ParquetReadOptions::default())
                 .await
         } else if ext.eq_ignore_ascii_case("arrow") || ext.eq_ignore_ascii_case("arrows") {
-            let mut options = ArrowReadOptions::default();
-            options.file_extension = ext;
+            let options = ArrowReadOptions::<'_> {
+                file_extension: ext,
+                ..Default::default()
+            };
             self.ctx.register_arrow(&name, table_path, options).await
         } else {
             return Err(QueryError::Register(format!("unknown extension: {ext}")));

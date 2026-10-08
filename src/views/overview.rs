@@ -29,10 +29,7 @@ pub fn view<'a>(
         kv("Path", file.path.display().to_string()),
         kv("Size on disk", human_bytes(file.file_size_bytes)),
         section("Contents"),
-        kv(
-            "Total rows",
-            file.total_rows.map_or("?".into(), |rows| count(rows))
-        ),
+        kv("Total rows", file.total_rows.map_or("?".into(), count)),
         kv(
             "Row groups",
             file.metadata
