@@ -7,7 +7,7 @@ authors = ["Wyatt Herkamp <wherkamp@gmail.com>"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/wyatt-herkamp/datafusion-ui"
-rust-version = "1.95"
+rust-version = "1.100"
 
 [workspace.dependencies]
 sqlparser = "0.62"
@@ -44,5 +44,5 @@ serde = { version = "1.0.228", features = ["derive"] }
 thiserror = "2"
 human-panic = "2.0"
 clap = { version = "4.1", features = ["derive", "env"] }
-dark-light = "2.0.0"
+dark-light = "3"
 hex = "0.4"
