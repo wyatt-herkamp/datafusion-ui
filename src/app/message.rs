@@ -57,6 +57,8 @@ pub enum FileMessage {
         result: Result<SchemaRef, QueryError>,
     },
     RowGroupToggled(usize),
+    SetRowGroupPage(usize),
+    SetChunkPage(usize),
     ToggleSchemaRow(usize),
     CopyCell(String),
     ClearCopyNotice,

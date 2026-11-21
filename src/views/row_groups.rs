@@ -7,13 +7,14 @@ use iced::{Background, Border, Element, Length, Padding, Theme};
 use parquet::basic::{Compression, Encoding};
 use parquet::file::metadata::{ColumnChunkMetaData, RowGroupMetaData};
 
-use crate::app::{FileMessage, Message};
+use crate::app::{FileMessage, FileTab, Message, ROW_GROUP_PAGE_SIZE};
 use crate::format::{count, human_bytes};
 use crate::parquet_io::FileSummary;
 use crate::stats_format::{self, Bound};
 use crate::theme as ui_theme;
 use crate::views::cell::CellString;
 use crate::views::overview::format_sorting_columns;
+use crate::views::pager::{PageWindow, pagination_bar};
 
 /// Width of each column in the expanded column-chunk table.
 ///
@@ -58,16 +59,24 @@ const TABLE_WIDTH: f32 = GUTTER + total_width(&CHUNK_COL_WIDTHS);
 // Keep the two tables from drifting apart.
 const _: () = assert!(total_width(&SUMMARY_COL_WIDTHS) == total_width(&CHUNK_COL_WIDTHS));
 
-pub fn view(file: &FileSummary, selected: Option<usize>) -> Option<Element<'_, Message>> {
+pub fn view(tab: &FileTab) -> Option<Element<'_, Message>> {
+    let file = &tab.summary;
+    let selected = tab.selected_row_group;
     let Some(meta) = &file.metadata else {
         return None;
     };
     let groups = meta.row_groups();
     let total_rows: i64 = groups.iter().map(RowGroupMetaData::num_rows).sum();
+    let window = PageWindow::new(tab.row_group_page, ROW_GROUP_PAGE_SIZE, groups.len());
 
     let mut table = column![summary_header()].spacing(0);
 
-    for (i, rg) in groups.iter().enumerate() {
+    for (i, rg) in groups
+        .iter()
+        .enumerate()
+        .skip(window.start)
+        .take(window.len())
+    {
         let expanded = selected == Some(i);
         let zebra = i % 2 == 1;
         let packed: i64 = rg.columns().iter().map(|c| c.compressed_size()).sum();
@@ -98,15 +107,17 @@ pub fn view(file: &FileSummary, selected: Option<usize>) -> Option<Element<'_, M
             table.push(container(summary).style(move |theme: &Theme| body_row_style(theme, zebra)));
 
         if expanded {
-            table = table.push(column_chunk_table(file, i));
+            table = table.push(column_chunk_table(file, i, tab.chunk_page));
         }
     }
 
-    Some(
-        column![stats_strip(file, groups, total_rows), table]
-            .spacing(14)
-            .into(),
-    )
+    let mut body = column![stats_strip(file, groups, total_rows)].spacing(14);
+    if window.pages > 1 {
+        body = body.push(pagination_bar("groups", window, groups.len(), |page| {
+            FileMessage::SetRowGroupPage(page).into()
+        }));
+    }
+    Some(body.push(table).into())
 }
 
 fn width(index: usize) -> f32 {
@@ -179,7 +190,7 @@ fn spread_tile<'a>(
     stat_tile(label, render(average), detail)
 }
 
-fn column_chunk_table(file: &FileSummary, rg_idx: usize) -> Element<'_, Message> {
+fn column_chunk_table(file: &FileSummary, rg_idx: usize, page: usize) -> Element<'_, Message> {
     let w = CHUNK_COL_WIDTHS;
     let mut columns = [
         CcColumn::new("Column", w[0], |cc| cc.column_path().string()),
@@ -207,10 +218,27 @@ fn column_chunk_table(file: &FileSummary, rg_idx: usize) -> Element<'_, Message>
     for column in columns.iter_mut() {
         header_row = header_row.push(column.element.take());
     }
-    let mut table = column![header_row].spacing(0);
+    let mut table = column![].spacing(0);
 
     if let Some(meta) = &file.metadata {
-        for (idx, cc) in meta.row_group(rg_idx).columns().iter().enumerate() {
+        let chunks = meta.row_group(rg_idx).columns();
+        let window = PageWindow::new(page, ROW_GROUP_PAGE_SIZE, chunks.len());
+        if window.pages > 1 {
+            table = table.push(
+                container(pagination_bar("columns", window, chunks.len(), |page| {
+                    FileMessage::SetChunkPage(page).into()
+                }))
+                .padding([0, 10]),
+            );
+        }
+        table = table.push(header_row);
+
+        for (idx, cc) in chunks
+            .iter()
+            .enumerate()
+            .skip(window.start)
+            .take(window.len())
+        {
             let mut row = row![].spacing(0);
 
             for column in columns.iter() {

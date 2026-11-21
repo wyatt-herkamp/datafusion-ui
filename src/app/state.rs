@@ -86,6 +86,10 @@ pub struct FileTab {
     /// Name this file is registered under in the shared local session.
     pub table_name: String,
     pub selected_row_group: Option<usize>,
+    /// Page of the Row Groups table, in units of [`ROW_GROUP_PAGE_SIZE`].
+    pub row_group_page: usize,
+    /// Page of the expanded group's column-chunk table, in units of [`ROW_GROUP_PAGE_SIZE`].
+    pub chunk_page: usize,
     /// Expanded rows in the Overview schema tree.
     pub expanded_schema_rows: AHashSet<usize>,
     /// Whether `register_file` into the shared session has completed, so the
@@ -102,6 +106,8 @@ impl FileTab {
             summary,
             table_name,
             selected_row_group: None,
+            row_group_page: 0,
+            chunk_page: 0,
             expanded_schema_rows: AHashSet::new(),
             registered: false,
             register_error: None,
@@ -243,6 +249,10 @@ pub(crate) const MAX_EDITOR_HEIGHT: f32 = 1200.0;
 /// Rows shown per page in a SQL editor's results grid (client-side paging over
 /// the already-fetched, capped result batch).
 pub(crate) const RESULT_PAGE_SIZE: usize = 100;
+
+/// Rows per page in the Row Groups tab, for both the group table and an expanded group's
+/// column chunks. Rendering every row of a file with thousands of groups or columns freezes the UI.
+pub(crate) const ROW_GROUP_PAGE_SIZE: usize = 100;
 
 pub struct SqlEditorTab {
     /// Stable id used to route async results (survives tab close/reorder).

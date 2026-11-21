@@ -26,6 +26,7 @@ use crate::sqlide_highlight::HighlightSettings;
 use crate::sqlide_highlight::SqlHighlighter;
 use crate::theme::palette;
 use crate::theme::{self, FONT_UI_MEDIUM};
+use crate::views::pager::{PageWindow, pagination_bar};
 use crate::widgets::resize_handle_vertical;
 
 /// Inner padding of the editor text area, also applied to the gutter so line
@@ -887,8 +888,8 @@ fn results_grid<'a>(
     page: usize,
 ) -> Element<'a, Message> {
     let total = batch.num_rows();
-    let pages = total.div_ceil(RESULT_PAGE_SIZE).max(1);
-    let page = page.min(pages - 1);
+    let window = PageWindow::new(page, RESULT_PAGE_SIZE, total);
+    let page = window.page;
 
     let grid = scrollable(crate::views::data::view_grid(
         batch,
@@ -906,46 +907,13 @@ fn results_grid<'a>(
     .width(Length::Fill)
     .height(Length::Fill);
 
-    if pages <= 1 {
+    if window.pages <= 1 {
         return grid.into();
     }
-    column![pagination_bar(id, page, pages, total), grid]
-        .spacing(6)
-        .height(Length::Fill)
-        .into()
-}
-
-/// Prev/next/first/last controls + a `rows a–b of N · page x/y` label.
-fn pagination_bar<'a>(id: u64, page: usize, pages: usize, total: usize) -> Element<'a, Message> {
-    let start = page * RESULT_PAGE_SIZE + 1;
-    let end = ((page + 1) * RESULT_PAGE_SIZE).min(total);
-    let nav = |glyph: &'static str, target: usize, enabled: bool| {
-        let b = button(theme::ui_medium(glyph).size(12))
-            .style(theme::ghost_button)
-            .padding([2, 8]);
-        if enabled {
-            b.on_press(SqlMessage::SetResultPage { id, page: target }.into())
-        } else {
-            b
-        }
-    };
-    let has_prev = page > 0;
-    let has_next = page + 1 < pages;
-    row![
-        nav("⏮", 0, has_prev),
-        nav("◀", page.saturating_sub(1), has_prev),
-        theme::mono_sm(format!(
-            "rows {start}–{end} of {total}  ·  page {}/{}",
-            page + 1,
-            pages
-        ))
-        .color(palette::fg_muted()),
-        nav("▶", page + 1, has_next),
-        nav("⏭", pages - 1, has_next),
-    ]
-    .spacing(8)
-    .align_y(iced::Alignment::Center)
-    .into()
+    let pager = pagination_bar("rows", window, total, move |page| {
+        SqlMessage::SetResultPage { id, page }.into()
+    });
+    column![pager, grid].spacing(6).height(Length::Fill).into()
 }
 
 /// Formatted | Raw segmented toggle for an EXPLAIN result.

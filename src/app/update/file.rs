@@ -96,6 +96,19 @@ impl App {
                     } else {
                         Some(i)
                     };
+                    ft.chunk_page = 0;
+                }
+                Task::none()
+            }
+            FileMessage::SetRowGroupPage(page) => {
+                if let Some(ft) = self.active_file_mut() {
+                    ft.row_group_page = page;
+                }
+                Task::none()
+            }
+            FileMessage::SetChunkPage(page) => {
+                if let Some(ft) = self.active_file_mut() {
+                    ft.chunk_page = page;
                 }
                 Task::none()
             }
