@@ -8,6 +8,6 @@ rust-version.workspace = true
 description = "GUI-agnostic SQL IDE support: lexing, schema-aware completion, and syntax diagnostics."
 
 [dependencies]
-# Reuses the exact sqlparser that DataFusion 54.0 resolves, so no duplicate compile.
+# Matches the sqlparser that DataFusion resolves, so no duplicate compile.
 sqlparser = { workspace = true }
 sqlformat = "0.5"

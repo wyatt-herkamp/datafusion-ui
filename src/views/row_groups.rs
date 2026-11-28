@@ -355,7 +355,8 @@ fn encoding_rank(encoding: Encoding) -> u8 {
         Encoding::DELTA_BINARY_PACKED
         | Encoding::DELTA_LENGTH_BYTE_ARRAY
         | Encoding::DELTA_BYTE_ARRAY
-        | Encoding::BYTE_STREAM_SPLIT => 1,
+        | Encoding::BYTE_STREAM_SPLIT
+        | Encoding::ALP => 1,
         // In a dictionary-encoded column PLAIN is just the dictionary page's own encoding.
         Encoding::PLAIN => 2,
         Encoding::RLE | Encoding::BIT_PACKED => 3,
@@ -504,7 +505,7 @@ mod tests {
         // Fails loudly if a parquet bump adds a variant that encoding_rank hasn't placed.
         #[allow(deprecated)]
         let variants = Encoding::VARIANTS;
-        assert_eq!(variants.len(), 9);
+        assert_eq!(variants.len(), 10);
         for &e in variants {
             assert!(encoding_rank(e) <= 3, "{e:?}");
         }

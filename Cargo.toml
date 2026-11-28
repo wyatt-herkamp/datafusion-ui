@@ -10,7 +10,7 @@ repository = "https://github.com/wyatt-herkamp/datafusion-ui"
 rust-version = "1.100"
 
 [workspace.dependencies]
-sqlparser = "0.62"
+sqlparser = "0.63"
 sql-ide = { path = "crates/sql-ide" }
 
 [package]
@@ -25,20 +25,20 @@ rust-version.workspace = true
 
 [dependencies]
 sql-ide = { workspace = true }
-arrow = { version = "59", features = ["chrono-tz"] }
+arrow = { version = "60", features = ["chrono-tz"] }
 chrono = { version = "0.4", default-features = false }
-datafusion = "55"
+datafusion = "56"
 iced = { version = "0.14.0", features = ["tokio", "canvas", "advanced"] }
-parquet = "59"
-rfd = "0.17.2"
+parquet = "60"
+rfd = "0.18"
 tokio = { version = "1.52.3", features = ["full"] }
 ahash = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
-arrow-flight = { version = "59", features = ["flight-sql-experimental"] }
+arrow-flight = { version = "60", features = ["flight-sql"] }
 tonic = "0.14"
 futures = "0.3"
-base64 = "0.22"
+base64 = "0.23"
 toml = "1.1.2"
 serde = { version = "1.0.228", features = ["derive"] }
 thiserror = "2"
